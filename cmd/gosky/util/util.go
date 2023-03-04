@@ -158,7 +158,10 @@ func SetupDatabase(dburl string) (*gorm.DB, error) {
 		// if this isn't ":memory:", ensure that directory exists (eg, if db
 		// file is being initialized)
 		if !strings.Contains(sqliteSuffix, ":?") {
-			os.MkdirAll(filepath.Dir(sqliteSuffix), os.ModePerm)
+			err := os.MkdirAll(filepath.Dir(sqliteSuffix), os.ModePerm)
+			if err != nil {
+				return nil, err
+			}
 		}
 		dial = sqlite.Open(sqliteSuffix)
 	} else if strings.HasPrefix(dburl, "sqlite=") {
@@ -166,7 +169,10 @@ func SetupDatabase(dburl string) (*gorm.DB, error) {
 		// if this isn't ":memory:", ensure that directory exists (eg, if db
 		// file is being initialized)
 		if !strings.Contains(sqliteSuffix, ":?") {
-			os.MkdirAll(filepath.Dir(sqliteSuffix), os.ModePerm)
+			err := os.MkdirAll(filepath.Dir(sqliteSuffix), os.ModePerm)
+			if err != nil {
+				return nil, err
+			}
 		}
 		dial = sqlite.Open(sqliteSuffix)
 	} else if strings.HasPrefix(dburl, "postgresql://") || strings.HasPrefix(dburl, "postgres://") {

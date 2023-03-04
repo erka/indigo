@@ -125,7 +125,10 @@ func run(args []string) {
 		// ensure data directory exists; won't error if it does
 		datadir := cctx.String("data-dir")
 		csdir := filepath.Join(datadir, "carstore")
-		os.MkdirAll(datadir, os.ModePerm)
+		err := os.MkdirAll(datadir, os.ModePerm)
+		if err != nil {
+			return err
+		}
 
 		dburl := cctx.String("db-url")
 		db, err := cliutil.SetupDatabase(dburl)
@@ -148,7 +151,11 @@ func run(args []string) {
 			}
 		}
 
-		os.MkdirAll(filepath.Dir(csdir), os.ModePerm)
+		err = os.MkdirAll(filepath.Dir(csdir), os.ModePerm)
+		if err != nil {
+			return err
+		}
+
 		cstore, err := carstore.NewCarStore(csdb, csdir)
 		if err != nil {
 			return err

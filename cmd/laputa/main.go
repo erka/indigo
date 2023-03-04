@@ -136,7 +136,10 @@ func run(args []string) {
 		pdsdomain := cctx.String("handle-domains")
 
 		// ensure data directories exist; won't error if it does
-		os.MkdirAll(csdir, os.ModePerm)
+		err := os.MkdirAll(csdir, os.ModePerm)
+		if err != nil {
+			return err
+		}
 
 		// default postgres setup: postgresql://postgres:password@localhost:5432/pdsdb?sslmode=disable
 		db, err := cliutil.SetupDatabase(cctx.String("db-url"))
@@ -216,7 +219,10 @@ var generateKeyCmd = &cli.Command{
 
 		fname := cctx.String("output")
 		// ensure data directory exists; won't error if it does
-		os.MkdirAll(filepath.Dir(fname), os.ModePerm)
+		err = os.MkdirAll(filepath.Dir(fname), os.ModePerm)
+		if err != nil {
+			return err
+		}
 
 		return os.WriteFile(fname, buf, 0664)
 	},
