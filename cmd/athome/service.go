@@ -43,7 +43,7 @@ func serve(cctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	xrpccUserAgent := "athome/" + version
+	xrpccUserAgent := "athome/" + cctx.App.Version
 	xrpcc := &xrpc.Client{
 		Client:    util.RobustHTTPClient(),
 		Host:      appviewHost,

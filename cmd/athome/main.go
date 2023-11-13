@@ -12,8 +12,7 @@ import (
 )
 
 var (
-	slog    = slogging.New(slogging.NewJSONHandler(os.Stdout, nil))
-	version = versioninfo.Short()
+	slog = slogging.New(slogging.NewJSONHandler(os.Stdout, nil))
 )
 
 func main() {
@@ -28,7 +27,13 @@ func run(args []string) error {
 	app := cli.App{
 		Name:    "athome",
 		Usage:   "public web interface to bluesky account content",
-		Version: version,
+		Version: versioninfo.Short(),
+	}
+
+	cli.VersionFlag = &cli.BoolFlag{
+		Name:    "version",
+		Aliases: []string{"v"},
+		Usage:   "print only the version",
 	}
 
 	app.Commands = []*cli.Command{
