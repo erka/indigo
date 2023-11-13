@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"embed"
-	"errors"
 	"io/fs"
 	"net/http"
 	"os"
@@ -44,11 +43,11 @@ func serve(cctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
+	xrpccUserAgent := "athome/" + version
 	xrpcc := &xrpc.Client{
-		Client: util.RobustHTTPClient(),
-		Host:   appviewHost,
-		// Headers: version
+		Client:    util.RobustHTTPClient(),
+		Host:      appviewHost,
+		UserAgent: &xrpccUserAgent,
 	}
 	e := echo.New()
 
@@ -121,23 +120,21 @@ func serve(cctx *cli.Context) error {
 	e.GET("/bsky/repo.car", srv.WebRepoCar)
 	e.GET("/bsky/rss.xml", srv.WebRepoRSS)
 
+	errCh := make(chan error)
 	// Start the server
 	slog.Info("starting server", "bind", httpAddress)
 	go func() {
 		if err := srv.httpd.ListenAndServe(); err != nil {
-			if !errors.Is(err, http.ErrServerClosed) {
-				slog.Error("HTTP server shutting down unexpectedly", "err", err)
-			}
+			errCh <- err
 		}
 	}()
 
 	// Wait for a signal to exit.
 	slog.Info("registering OS exit signal handler")
-	quit := make(chan struct{})
 	exitSignals := make(chan os.Signal, 1)
 	signal.Notify(exitSignals, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-exitSignals
+	select {
+	case sig := <-exitSignals:
 		slog.Info("received OS exit signal", "signal", sig)
 
 		// Shut down the HTTP server
@@ -146,10 +143,11 @@ func serve(cctx *cli.Context) error {
 		}
 
 		// Trigger the return that causes an exit.
-		close(quit)
-	}()
-	<-quit
-	slog.Info("graceful shutdown complete")
+		slog.Info("graceful shutdown complete")
+
+	case err := <-errCh:
+		slog.Error("HTTP server shutting down unexpectedly", "err", err)
+	}
 	return nil
 }
 
