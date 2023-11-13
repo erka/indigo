@@ -4,7 +4,11 @@ import (
 	"fmt"
 	slogging "log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/bluesky-social/indigo/util"
+	"github.com/bluesky-social/indigo/xrpc"
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/urfave/cli/v2"
 
@@ -77,4 +81,50 @@ func run(args []string) error {
 	}
 
 	return app.Run(args)
+}
+
+func serve(cctx *cli.Context) error {
+	debug := cctx.Bool("debug")
+	httpAddress := cctx.String("bind")
+	appviewHost := cctx.String("appview-host")
+
+	xrpccUserAgent := "athome/" + cctx.App.Version
+	xrpcc := &xrpc.Client{
+		Client:    util.RobustHTTPClient(),
+		Host:      appviewHost,
+		UserAgent: &xrpccUserAgent,
+	}
+	srv, err := NewServer(xrpcc, debug)
+	if err != nil {
+		return err
+	}
+
+	errCh := make(chan error)
+	// Start the server
+	go func() {
+		if err := srv.ListenAndServe(httpAddress); err != nil {
+			errCh <- err
+		}
+	}()
+
+	// Wait for a signal to exit.
+	slog.Info("registering OS exit signal handler")
+	exitSignals := make(chan os.Signal, 1)
+	signal.Notify(exitSignals, syscall.SIGINT, syscall.SIGTERM)
+	select {
+	case sig := <-exitSignals:
+		slog.Info("received OS exit signal", "signal", sig)
+
+		// Shut down the HTTP server
+		if err := srv.Shutdown(); err != nil {
+			slog.Error("HTTP server shutdown error", "err", err)
+		}
+
+		// Trigger the return that causes an exit.
+		slog.Info("graceful shutdown complete")
+
+	case err := <-errCh:
+		slog.Error("HTTP server shutting down unexpectedly", "err", err)
+	}
+	return nil
 }
