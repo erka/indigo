@@ -26,15 +26,17 @@ func main() {
 func run(args []string) error {
 
 	app := cli.App{
-		Name:  "athome",
-		Usage: "public web interface to bluesky account content",
+		Name:    "athome",
+		Usage:   "public web interface to bluesky account content",
+		Version: version,
 	}
 
 	app.Commands = []*cli.Command{
-		&cli.Command{
-			Name:   "serve",
-			Usage:  "run the server",
-			Action: serve,
+		{
+			Name:    "serve",
+			Aliases: []string{"s"},
+			Usage:   "run the server",
+			Action:  serve,
 			Flags: []cli.Flag{
 				&cli.StringFlag{
 					Name:    "appview-host",
@@ -58,11 +60,12 @@ func run(args []string) error {
 				},
 			},
 		},
-		&cli.Command{
-			Name:  "version",
-			Usage: "print version",
+		{
+			Name:    "version",
+			Aliases: []string{"v"},
+			Usage:   "print version",
 			Action: func(cctx *cli.Context) error {
-				fmt.Println(version)
+				fmt.Println("athome version", cctx.App.Version)
 				return nil
 			},
 		},
