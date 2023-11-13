@@ -105,7 +105,7 @@ type GenericStatus struct {
 }
 
 func (srv *Server) errorHandler(err error, c echo.Context) {
-	code := http.StatusInternalServerError
+	code := c.Response().Status
 	if he, ok := err.(*echo.HTTPError); ok {
 		code = he.Code
 	}
