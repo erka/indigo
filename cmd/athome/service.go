@@ -58,7 +58,7 @@ func NewServer(xrpcc *xrpc.Client, debug bool) (*Server, error) {
 	e.Use(echoprometheus.NewMiddleware("athome"))
 	e.Use(middleware.BodyLimit("64M"))
 	e.HTTPErrorHandler = srv.errorHandler
-	e.Renderer = NewRenderer("templates/", &TemplateFS, debug)
+	e.Renderer = NewRenderer(debug)
 	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
 		ContentTypeNosniff: "nosniff",
 		XFrameOptions:      "SAMEORIGIN",
@@ -105,11 +105,16 @@ type GenericStatus struct {
 }
 
 func (srv *Server) errorHandler(err error, c echo.Context) {
-	code := c.Response().Status
+	if c.Response().Committed {
+		return
+	}
+
+	code := http.StatusInternalServerError
 	if he, ok := err.(*echo.HTTPError); ok {
 		code = he.Code
 	}
-	if code >= 500 {
+
+	if code >= http.StatusInternalServerError {
 		slog.Warn("athome-http-internal-error", "err", err)
 	}
 	data := pongo2.Context{

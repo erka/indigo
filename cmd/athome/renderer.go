@@ -20,21 +20,20 @@ type RendererLoader struct {
 	fs     *embed.FS
 }
 
-func NewRendererLoader(prefix string, fs *embed.FS) pongo2.TemplateLoader {
+func NewRendererLoader() pongo2.TemplateLoader {
 	return &RendererLoader{
-		prefix: prefix,
-		fs:     fs,
+		fs: &TemplateFS,
 	}
 }
-func (l *RendererLoader) Abs(_, name string) string {
-	// TODO: remove this workaround
-	// Figure out why this method is being called
-	// twice on template names resulting in a failure to resolve
-	// the template name.
-	if filepath.HasPrefix(name, l.prefix) {
-		return name
+func (l *RendererLoader) Abs(base, name string) string {
+	// There are a top-level templates and they have base as empty string.
+	// Top-level template may include other template(s) and in this case their path
+	// becomes relative to top-level. For example, templates/profile.html will be the `base` and
+	// header.html will be the `name`.
+	if base != "" {
+		return filepath.Join(filepath.Dir(base), name)
 	}
-	return filepath.Join(l.prefix, name)
+	return name
 }
 
 func (l *RendererLoader) Get(path string) (io.Reader, error) {
@@ -50,9 +49,9 @@ type Renderer struct {
 	Debug       bool
 }
 
-func NewRenderer(prefix string, fs *embed.FS, debug bool) *Renderer {
+func NewRenderer(debug bool) *Renderer {
 	return &Renderer{
-		TemplateSet: pongo2.NewSet(prefix, NewRendererLoader(prefix, fs)),
+		TemplateSet: pongo2.NewSet("web", NewRendererLoader()),
 		Debug:       debug,
 	}
 }
@@ -70,7 +69,7 @@ func (r Renderer) Render(w io.Writer, name string, data interface{}, c echo.Cont
 
 	var t *pongo2.Template
 	var err error
-
+	name = filepath.Join("templates", name)
 	if r.Debug {
 		t, err = pongo2.FromFile(name)
 	} else {
